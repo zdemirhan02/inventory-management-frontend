@@ -7,6 +7,8 @@ import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import CategoryList from './pages/CategoryList';
 import ProductList from './pages/ProductList';
+import ProductDetail from './pages/ProductDetail';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/categories" element={<CategoryList />} />
             <Route path="/products" element={<ProductList />} />
+            <Route path="/products/:id" element={<ProductDetail />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <ToastContainer position="top-right" autoClose={3000} />

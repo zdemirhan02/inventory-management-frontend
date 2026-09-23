@@ -1,38 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import { getCategories } from '../api/categoryService';
 import { getProducts } from '../api/productService';
-import { FaTags, FaBoxes, FaChartPie } from 'react-icons/fa';
+import { FaTags, FaBoxes, FaChartPie, FaExclamationTriangle, FaRedo } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 
 const Dashboard = () => {
   const [categoryCount, setCategoryCount] = useState(0);
   const [productCount, setProductCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [catRes, prodRes] = await Promise.all([getCategories(), getProducts()]);
+      
+      // Kategorileri Dizi İse Say
+      setCategoryCount(Array.isArray(catRes.data) ? catRes.data.length : 0);
+
+      // Spring Boot Page Objesinden Toplam Eleman Sayısını (totalElements) Al
+      if (prodRes.data && prodRes.data.totalElements !== undefined) {
+        setProductCount(prodRes.data.totalElements);
+      } else if (Array.isArray(prodRes.data)) {
+        setProductCount(prodRes.data.length);
+      } else if (prodRes.data && Array.isArray(prodRes.data.content)) {
+        setProductCount(prodRes.data.content.length);
+      } else {
+        setProductCount(0);
+      }
+    } catch (err) {
+      console.error('Veriler çekilirken hata oluştu:', err);
+      const errMsg = err.response?.data?.message || 'Dashboard verileri yüklenirken sunucu hatası oluştu.';
+      setError(errMsg);
+      toast.error(errMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [catRes, prodRes] = await Promise.all([getCategories(), getProducts()]);
-        
-        // Kategorileri Dizi İse Say
-        setCategoryCount(Array.isArray(catRes.data) ? catRes.data.length : 0);
-
-        // Spring Boot Page Objesinden Toplam Eleman Sayısını (totalElements) Al
-        if (prodRes.data && prodRes.data.totalElements !== undefined) {
-          setProductCount(prodRes.data.totalElements);
-        } else if (Array.isArray(prodRes.data)) {
-          setProductCount(prodRes.data.length);
-        } else if (prodRes.data && Array.isArray(prodRes.data.content)) {
-          setProductCount(prodRes.data.content.length);
-        } else {
-          setProductCount(0);
-        }
-      } catch (error) {
-        console.error('Veriler çekilirken hata oluştu:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
@@ -43,7 +50,21 @@ const Dashboard = () => {
       </h1>
 
       {loading ? (
-        <div className="text-gray-500">Yükleniyor...</div>
+        <div className="text-gray-500 font-medium">Yükleniyor...</div>
+      ) : error ? (
+        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-xl shadow-md text-red-700 flex flex-col items-center justify-center gap-4">
+          <FaExclamationTriangle className="text-4xl text-red-500" />
+          <div className="text-center">
+            <h3 className="text-lg font-bold">Veriler Yüklenemedi</h3>
+            <p className="text-sm text-red-600 mt-1">{error}</p>
+          </div>
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm"
+          >
+            <FaRedo /> Tekrar Dene
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Toplam Kategori Kartı */}

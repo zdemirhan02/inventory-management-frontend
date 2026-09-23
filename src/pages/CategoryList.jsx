@@ -6,10 +6,8 @@ import { FaPlus, FaTrash, FaEdit, FaTags, FaSave, FaTimes } from 'react-icons/fa
 const CategoryList = () => {
   const [categories, setCategories] = useState([]);
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
   const [loading, setLoading] = useState(true);
 
   const fetchCategories = async () => {
@@ -36,10 +34,9 @@ const CategoryList = () => {
     }
 
     try {
-      await createCategory({ name, description });
+      await createCategory({ name });
       toast.success('Kategori başarıyla eklendi!');
       setName('');
-      setDescription('');
       fetchCategories();
     } catch (error) {
       toast.error('Kategori eklenirken hata oluştu.');
@@ -50,7 +47,6 @@ const CategoryList = () => {
   const handleEditClick = (category) => {
     setEditingId(category.id);
     setEditName(category.name || '');
-    setEditDescription(category.description || '');
   };
 
   // Kategori Güncelleme (PUT)
@@ -61,7 +57,7 @@ const CategoryList = () => {
     }
 
     try {
-      await updateCategory(id, { name: editName, description: editDescription });
+      await updateCategory(id, { name: editName });
       toast.success('Kategori başarıyla güncellendi!');
       setEditingId(null);
       fetchCategories();
@@ -97,19 +93,12 @@ const CategoryList = () => {
       {/* Form */}
       <div className="bg-white p-6 rounded-xl shadow-md mb-8">
         <h2 className="text-xl font-semibold mb-4 text-gray-700">Yeni Kategori Ekle</h2>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <input
             type="text"
             placeholder="Kategori Adı *"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="border p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <input
-            type="text"
-            placeholder="Açıklama"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
             className="border p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <button
@@ -131,7 +120,6 @@ const CategoryList = () => {
               <tr>
                 <th className="p-4">ID</th>
                 <th className="p-4">Kategori Adı</th>
-                <th className="p-4">Açıklama</th>
                 <th className="p-4 text-right">İşlemler</th>
               </tr>
             </thead>
@@ -149,14 +137,6 @@ const CategoryList = () => {
                             type="text"
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
-                            className="border p-1 rounded w-full"
-                          />
-                        </td>
-                        <td className="p-4">
-                          <input
-                            type="text"
-                            value={editDescription}
-                            onChange={(e) => setEditDescription(e.target.value)}
                             className="border p-1 rounded w-full"
                           />
                         </td>
@@ -181,7 +161,6 @@ const CategoryList = () => {
                       /* Normal Görünüm Satırı */
                       <>
                         <td className="p-4 font-semibold text-gray-800">{cat.name}</td>
-                        <td className="p-4 text-gray-600">{cat.description || '-'}</td>
                         <td className="p-4 text-right flex justify-end gap-2">
                           <button
                             onClick={() => handleEditClick(cat)}
@@ -204,7 +183,7 @@ const CategoryList = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="p-6 text-center text-gray-500">
+                  <td colSpan="3" className="p-6 text-center text-gray-500">
                     Henüz kategori bulunmamaktadır.
                   </td>
                 </tr>

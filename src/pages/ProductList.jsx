@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   getProducts,
   createProduct,
@@ -12,7 +13,7 @@ import { getCategories } from '../api/categoryService';
 import { toast } from 'react-toastify';
 import { 
   FaPlus, FaTrash, FaEdit, FaBoxes, FaSearch, 
-  FaFilter, FaCheckCircle, FaSort, FaSave, FaTimes 
+  FaFilter, FaCheckCircle, FaSort, FaSave, FaTimes, FaEye
 } from 'react-icons/fa';
 
 const ProductList = () => {
@@ -47,19 +48,20 @@ const ProductList = () => {
       setCategories(Array.isArray(catRes.data) ? catRes.data : []);
 
       let prodRes;
+      const pageParams = {
+        page: currentPage,
+        size: pageSize,
+        sort: `name,${sortOrder}`
+      };
 
       if (searchTerm.trim()) {
-        prodRes = await searchProducts(searchTerm);
+        prodRes = await searchProducts(searchTerm.trim(), pageParams);
       } else if (selectedCategoryFilter) {
-        prodRes = await getProductsByCategory(selectedCategoryFilter);
+        prodRes = await getProductsByCategory(selectedCategoryFilter, pageParams);
       } else if (onlyInStock) {
-        prodRes = await getInStockProducts();
+        prodRes = await getInStockProducts(pageParams);
       } else {
-        prodRes = await getProducts({
-          page: currentPage,
-          size: pageSize,
-          sort: `name,${sortOrder}`
-        });
+        prodRes = await getProducts(pageParams);
       }
 
       if (prodRes.data && Array.isArray(prodRes.data.content)) {
@@ -93,12 +95,12 @@ const ProductList = () => {
 
     if (!name.trim()) return toast.warning('Ürün adı boş bırakılamaz!');
     if (!categoryId) return toast.warning('Lütfen bir kategori seçin!');
-    if (Number(price) < 0) return toast.warning('Fiyat negatif olamaz!');
-    if (Number(stockQuantity) < 0) return toast.warning('Stok adedi negatif olamaz!');
+    if (price === '' || isNaN(price) || Number(price) < 0) return toast.warning('Geçerli ve pozitif bir fiyat giriniz!');
+    if (stockQuantity === '' || isNaN(stockQuantity) || Number(stockQuantity) < 0) return toast.warning('Geçerli ve pozitif bir stok adedi giriniz!');
 
     try {
       await createProduct({
-        name,
+        name: name.trim(),
         description,
         price: Number(price),
         stockQuantity: Number(stockQuantity),
@@ -125,20 +127,21 @@ const ProductList = () => {
     setEditForm({
       name: product.name || '',
       description: product.description || '',
-      price: product.price || 0,
-      stockQuantity: product.stockQuantity || 0,
+      price: product.price ?? '',
+      stockQuantity: product.stockQuantity ?? '',
       categoryId: product.category ? product.category.id : ''
     });
   };
 
   const handleUpdate = async (id) => {
     if (!editForm.name.trim()) return toast.warning('Ürün adı boş olamaz!');
-    if (Number(editForm.price) < 0) return toast.warning('Fiyat negatif olamaz!');
-    if (Number(editForm.stockQuantity) < 0) return toast.warning('Stok negatif olamaz!');
+    if (editForm.price === '' || isNaN(editForm.price) || Number(editForm.price) < 0) return toast.warning('Geçerli ve pozitif bir fiyat giriniz!');
+    if (editForm.stockQuantity === '' || isNaN(editForm.stockQuantity) || Number(editForm.stockQuantity) < 0) return toast.warning('Geçerli ve pozitif bir stok adedi giriniz!');
 
     try {
       await updateProduct(id, {
         ...editForm,
+        name: editForm.name.trim(),
         price: Number(editForm.price),
         stockQuantity: Number(editForm.stockQuantity),
         categoryId: Number(editForm.categoryId)
@@ -177,6 +180,7 @@ const ProductList = () => {
             placeholder="Ürün Adı *"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            required
             className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400 outline-none"
           />
           <input
@@ -184,6 +188,9 @@ const ProductList = () => {
             placeholder="Fiyat (₺) *"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
+            required
+            min="0"
+            step="0.01"
             className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400 outline-none"
           />
           <input
@@ -191,11 +198,14 @@ const ProductList = () => {
             placeholder="Stok Adedi *"
             value={stockQuantity}
             onChange={(e) => setStockQuantity(e.target.value)}
+            required
+            min="0"
             className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400 outline-none"
           />
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
+            required
             className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400 outline-none"
           >
             <option value="">Kategori Seçin *</option>
@@ -242,6 +252,7 @@ const ProductList = () => {
               setSelectedCategoryFilter(e.target.value);
               setSearchTerm('');
               setOnlyInStock(false);
+              setCurrentPage(0);
             }}
             className="border p-2 rounded-lg w-full text-sm outline-none"
           >
@@ -257,6 +268,7 @@ const ProductList = () => {
             setOnlyInStock(!onlyInStock);
             setSelectedCategoryFilter('');
             setSearchTerm('');
+            setCurrentPage(0);
           }}
           className={`flex items-center justify-center gap-2 p-2 rounded-lg text-sm border font-medium transition ${
             onlyInStock ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-gray-50 text-gray-600'
@@ -283,6 +295,7 @@ const ProductList = () => {
               <tr>
                 <th className="p-4">#</th>
                 <th className="p-4">Ürün Adı</th>
+                <th className="p-4">Açıklama</th>
                 <th className="p-4">Fiyat</th>
                 <th className="p-4">Stok</th>
                 <th className="p-4">Kategori</th>
@@ -293,7 +306,6 @@ const ProductList = () => {
               {products.length > 0 ? (
                 products.map((p, index) => (
                   <tr key={p.id} className="hover:bg-gray-50">
-                    {/* Sıra Numarası (1, 2, 3...) */}
                     <td className="p-4 font-mono text-sm text-gray-500">{currentPage * pageSize + index + 1}</td>
 
                     {editingId === p.id ? (
@@ -303,7 +315,17 @@ const ProductList = () => {
                             type="text"
                             value={editForm.name}
                             onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                            required
                             className="border p-1 rounded w-full"
+                          />
+                        </td>
+                        <td className="p-4">
+                          <input
+                            type="text"
+                            value={editForm.description}
+                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                            className="border p-1 rounded w-full"
+                            placeholder="Açıklama"
                           />
                         </td>
                         <td className="p-4">
@@ -311,6 +333,9 @@ const ProductList = () => {
                             type="number"
                             value={editForm.price}
                             onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                            required
+                            min="0"
+                            step="0.01"
                             className="border p-1 rounded w-20"
                           />
                         </td>
@@ -319,6 +344,8 @@ const ProductList = () => {
                             type="number"
                             value={editForm.stockQuantity}
                             onChange={(e) => setEditForm({ ...editForm, stockQuantity: e.target.value })}
+                            required
+                            min="0"
                             className="border p-1 rounded w-20"
                           />
                         </td>
@@ -326,6 +353,7 @@ const ProductList = () => {
                           <select
                             value={editForm.categoryId}
                             onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
+                            required
                             className="border p-1 rounded"
                           >
                             {categories.map((c) => (
@@ -345,6 +373,7 @@ const ProductList = () => {
                     ) : (
                       <>
                         <td className="p-4 font-semibold text-gray-800">{p.name}</td>
+                        <td className="p-4 text-gray-600 text-sm">{p.description || '-'}</td>
                         <td className="p-4 text-emerald-600 font-bold">{p.price} ₺</td>
                         <td className="p-4 text-gray-600">{p.stockQuantity} adet</td>
                         <td className="p-4">
@@ -353,6 +382,13 @@ const ProductList = () => {
                           </span>
                         </td>
                         <td className="p-4 text-right flex justify-end gap-2">
+                          <Link
+                            to={`/products/${p.id}`}
+                            className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 inline-flex items-center justify-center"
+                            title="Detay Göster"
+                          >
+                            <FaEye />
+                          </Link>
                           <button
                             onClick={() => handleEditClick(p)}
                             className="bg-amber-500 text-white p-2 rounded-lg hover:bg-amber-600"
@@ -374,7 +410,7 @@ const ProductList = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="p-6 text-center text-gray-500">
+                  <td colSpan="7" className="p-6 text-center text-gray-500">
                     Henüz ürün bulunmamaktadır.
                   </td>
                 </tr>
@@ -390,7 +426,7 @@ const ProductList = () => {
           <button
             disabled={currentPage === 0}
             onClick={() => setCurrentPage((prev) => prev - 1)}
-            className="px-4 py-2 border rounded-lg bg-white disabled:opacity-50"
+            className="px-4 py-2 border rounded-lg bg-white disabled:opacity-50 hover:bg-gray-50"
           >
             Önceki
           </button>
@@ -400,7 +436,7 @@ const ProductList = () => {
           <button
             disabled={currentPage + 1 >= totalPages}
             onClick={() => setCurrentPage((prev) => prev + 1)}
-            className="px-4 py-2 border rounded-lg bg-white disabled:opacity-50"
+            className="px-4 py-2 border rounded-lg bg-white disabled:opacity-50 hover:bg-gray-50"
           >
             Sonraki
           </button>
