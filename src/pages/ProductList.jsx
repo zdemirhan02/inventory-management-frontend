@@ -93,8 +93,11 @@ const ProductList = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    setCurrentPage(0);
-    fetchData();
+    if (currentPage === 0) {
+      fetchData();
+    } else {
+      setCurrentPage(0);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -149,12 +152,12 @@ const ProductList = () => {
       return toast.warning('Lütfen bir kategori seçin.');
     }
 
-    if (!Number.isFinite(Number(editForm.price)) || Number(editForm.price) < 0) {
-      return toast.warning('Fiyat negatif olamaz.');
+    if (editForm.price === '' || !Number.isFinite(Number(editForm.price)) || Number(editForm.price) < 0) {
+      return toast.warning('Fiyat boş olamaz veya negatif olamaz.');
     }
 
-    if (!Number.isInteger(Number(editForm.stockQuantity)) || Number(editForm.stockQuantity) < 0) {
-      return toast.warning('Stok adedi negatif olmayan tam sayı olmalıdır.');
+    if (editForm.stockQuantity === '' || !Number.isInteger(Number(editForm.stockQuantity)) || Number(editForm.stockQuantity) < 0) {
+      return toast.warning('Stok adedi boş olamaz; negatif olmayan tam sayı olmalıdır.');
     }
 
     try {
