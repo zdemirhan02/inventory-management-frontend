@@ -21,18 +21,15 @@ const ProductList = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Form State
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [stockQuantity, setStockQuantity] = useState('');
   const [categoryId, setCategoryId] = useState('');
 
-  // Düzenleme (Edit) State
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', description: '', price: '', stockQuantity: '', categoryId: '' });
 
-  // Filtreleme, Arama, Pagination & Sorting State'leri
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
@@ -41,12 +38,22 @@ const ProductList = () => {
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 5;
 
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const response = await getCategories();
+        setCategories(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        toast.error('Kategoriler yüklenirken hata oluştu.');
+      }
+    };
+
+    loadCategories();
+  }, []);
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const catRes = await getCategories();
-      setCategories(Array.isArray(catRes.data) ? catRes.data : []);
-
       let prodRes;
       const pageParams = {
         page: currentPage,
@@ -134,9 +141,21 @@ const ProductList = () => {
   };
 
   const handleUpdate = async (id) => {
-    if (!editForm.name.trim()) return toast.warning('Ürün adı boş olamaz!');
-    if (editForm.price === '' || isNaN(editForm.price) || Number(editForm.price) < 0) return toast.warning('Geçerli ve pozitif bir fiyat giriniz!');
-    if (editForm.stockQuantity === '' || isNaN(editForm.stockQuantity) || Number(editForm.stockQuantity) < 0) return toast.warning('Geçerli ve pozitif bir stok adedi giriniz!');
+    if (!editForm.name.trim()) {
+      return toast.warning('Ürün adı boş olamaz!');
+    }
+
+    if (!editForm.categoryId) {
+      return toast.warning('Lütfen bir kategori seçin.');
+    }
+
+    if (!Number.isFinite(Number(editForm.price)) || Number(editForm.price) < 0) {
+      return toast.warning('Fiyat negatif olamaz.');
+    }
+
+    if (!Number.isInteger(Number(editForm.stockQuantity)) || Number(editForm.stockQuantity) < 0) {
+      return toast.warning('Stok adedi negatif olmayan tam sayı olmalıdır.');
+    }
 
     try {
       await updateProduct(id, {
@@ -171,7 +190,6 @@ const ProductList = () => {
         <FaBoxes className="text-emerald-600" /> Ürün Yönetimi
       </h1>
 
-      {/* YENİ ÜRÜN EKLEME FORMU */}
       <div className="bg-white p-6 rounded-xl shadow-md mb-8">
         <h2 className="text-xl font-semibold mb-4 text-gray-700">Yeni Ürün Ekle</h2>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -229,7 +247,6 @@ const ProductList = () => {
         </form>
       </div>
 
-      {/* ARAMA, FİLTRELEME & SIRALAMA PANELİ */}
       <div className="bg-white p-4 rounded-xl shadow-md mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
         <form onSubmit={handleSearchSubmit} className="flex gap-2">
           <input
@@ -285,7 +302,6 @@ const ProductList = () => {
         </button>
       </div>
 
-      {/* TABLO */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         {loading ? (
           <div className="p-6 text-gray-500">Yükleniyor...</div>
@@ -356,6 +372,7 @@ const ProductList = () => {
                             required
                             className="border p-1 rounded"
                           >
+                            <option value="">Seçiniz</option>
                             {categories.map((c) => (
                               <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
@@ -420,7 +437,6 @@ const ProductList = () => {
         )}
       </div>
 
-      {/* PAGINATION */}
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-4 mt-6">
           <button
